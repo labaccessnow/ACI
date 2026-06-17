@@ -1,0 +1,23 @@
+---
+# Build a tenant + application profile + EPG on APIC (cisco.aci).
+#   ansible-galaxy collection install cisco.aci
+- name: ACI tenant / AP / EPG
+  hosts: apic
+  gather_facts: false
+  vars:
+    aci: &aci
+      host: "{{ apic_host }}"
+      username: "{{ apic_user }}"
+      password: "{{ apic_password }}"
+      validate_certs: false
+  tasks:
+    - cisco.aci.aci_tenant: { <<: *aci, tenant: PROD, description: "Production", state: present }
+    - cisco.aci.aci_ap:     { <<: *aci, tenant: PROD, ap: web-app, state: present }
+    - cisco.aci.aci_epg:
+        <<: *aci
+        tenant: PROD
+        ap: web-app
+        epg: web
+        bd: web-bd
+        preferred_group: false     # keep it OUT of the permit-any group
+        state: present
