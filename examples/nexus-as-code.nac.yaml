@@ -1,0 +1,38 @@
+# "Nexus as Code" — describe the whole fabric as one YAML data model and let a maintained
+# Terraform module (netascode/nac-aci/aci) realize it on the APIC. Same intent as the
+# playbooks, but the source of truth is DATA, not tasks: engineers edit YAML, the module
+# owns the API calls. This is where ACI automation has been heading.
+#
+#   module "aci" {
+#     source     = "netascode/nac-aci/aci"
+#     yaml_files = ["nexus-as-code.nac.yaml"]
+#   }
+apic:
+  tenants:
+    - name: PROD
+      vrfs:
+        - name: prod-vrf
+      bridge_domains:
+        - name: web-bd
+          vrf: prod-vrf
+      application_profiles:
+        - name: web-app
+          endpoint_groups:
+            - name: web
+              bridge_domain: web-bd
+            - name: app
+              bridge_domain: web-bd
+      filters:
+        - name: app-traffic
+          entries:
+            - name: tcp-8080
+              ethertype: ip
+              protocol: tcp
+              destination_from_port: 8080
+              destination_to_port: 8080
+      contracts:
+        - name: web-to-app
+          subjects:
+            - name: app
+              filters:
+                - app-traffic

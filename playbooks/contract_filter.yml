@@ -1,0 +1,60 @@
+---
+# The point of ACI: explicit allow between EPGs. Build a reusable filter, wrap it in a
+# contract, then have one EPG PROVIDE it and another CONSUME it. No contract = no traffic.
+#   ansible-galaxy collection install cisco.aci
+- name: ACI contract — allow web -> app on tcp/8080
+  hosts: apic
+  gather_facts: false
+  vars:
+    aci: &aci
+      host: "{{ apic_host }}"
+      username: "{{ apic_user }}"
+      password: "{{ apic_password }}"
+      validate_certs: false
+  tasks:
+    - name: Filter
+      cisco.aci.aci_filter:
+        { <<: *aci, tenant: PROD, filter: app-traffic, state: present }
+
+    - name: Filter entry — tcp/8080
+      cisco.aci.aci_filter_entry:
+        <<: *aci
+        tenant: PROD
+        filter: app-traffic
+        entry: tcp-8080
+        ether_type: ip
+        ip_protocol: tcp
+        dst_port: 8080
+        state: present
+
+    - name: Contract (scoped to the VRF)
+      cisco.aci.aci_contract:
+        { <<: *aci, tenant: PROD, contract: web-to-app, scope: context, state: present }
+
+    - name: Contract subject
+      cisco.aci.aci_contract_subject:
+        { <<: *aci, tenant: PROD, contract: web-to-app, subject: app, state: present }
+
+    - name: Bind subject -> filter
+      cisco.aci.aci_contract_subject_to_filter:
+        { <<: *aci, tenant: PROD, contract: web-to-app, subject: app, filter: app-traffic, state: present }
+
+    - name: web EPG PROVIDES the contract
+      cisco.aci.aci_epg_to_contract:
+        <<: *aci
+        tenant: PROD
+        ap: web-app
+        epg: web
+        contract: web-to-app
+        contract_type: provider
+        state: present
+
+    - name: app EPG CONSUMES the contract
+      cisco.aci.aci_epg_to_contract:
+        <<: *aci
+        tenant: PROD
+        ap: web-app
+        epg: app
+        contract: web-to-app
+        contract_type: consumer
+        state: present

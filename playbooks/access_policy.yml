@@ -1,0 +1,53 @@
+---
+# The access-policy chain — how a leaf port actually gets a VLAN. VLAN pool -> physical
+# domain -> AEP. (You then tie the AEP to an interface policy group on the port.) This is
+# the part that trips people up: an EPG's VLAN binding means nothing until this plumbing
+# exists underneath it.
+- name: ACI access policy — VLAN pool, domain, AEP
+  hosts: apic
+  gather_facts: false
+  vars:
+    aci: &aci
+      host: "{{ apic_host }}"
+      username: "{{ apic_user }}"
+      password: "{{ apic_password }}"
+      validate_certs: false
+  tasks:
+    - name: VLAN pool (static allocation)
+      cisco.aci.aci_vlan_pool:
+        { <<: *aci, pool: lab-pool, pool_allocation_mode: static, state: present }
+
+    - name: VLAN encap block 100-199
+      cisco.aci.aci_vlan_pool_encap_block:
+        <<: *aci
+        pool: lab-pool
+        pool_allocation_mode: static
+        block_name: lab-block
+        block_start: 100
+        block_end: 199
+        state: present
+
+    - name: Physical domain
+      cisco.aci.aci_domain:
+        { <<: *aci, domain: lab-phys, domain_type: phys, state: present }
+
+    - name: Bind domain -> VLAN pool
+      cisco.aci.aci_domain_to_vlan_pool:
+        <<: *aci
+        domain: lab-phys
+        domain_type: phys
+        pool: lab-pool
+        pool_allocation_mode: static
+        state: present
+
+    - name: AEP (Attachable Access Entity Profile)
+      cisco.aci.aci_aep:
+        { <<: *aci, aep: lab-aep, state: present }
+
+    - name: Bind AEP -> physical domain
+      cisco.aci.aci_aep_to_domain:
+        <<: *aci
+        aep: lab-aep
+        domain: lab-phys
+        domain_type: phys
+        state: present

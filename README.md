@@ -3,6 +3,22 @@
 Spine-leaf fabric design and automation — describing application intent (who talks to whom, on
 what ports) instead of hand-plumbing VLANs and ACLs across a stack of switches.
 
+## What's in this repo
+Runnable examples — the logical model, the access plumbing under it, and three ways to
+drive the APIC:
+
+| File | What it shows |
+|---|---|
+| [`playbooks/tenant_ap_epg.yml`](playbooks/tenant_ap_epg.yml) | Tenant → application profile → EPG (`cisco.aci`) |
+| [`playbooks/contract_filter.yml`](playbooks/contract_filter.yml) | The whole point of ACI — **filter → contract → provide/consume** between EPGs |
+| [`playbooks/access_policy.yml`](playbooks/access_policy.yml) | The **access-policy chain** (VLAN pool → domain → AEP) that makes a port usable |
+| [`examples/main.tf`](examples/main.tf) | The same fabric as **Terraform** (CiscoDevNet/aci provider) |
+| [`examples/apic_rest.py`](examples/apic_rest.py) | Raw **APIC REST** — login, push an MO, log out |
+| [`examples/nexus-as-code.nac.yaml`](examples/nexus-as-code.nac.yaml) | **Nexus-as-Code** — the fabric as a single YAML data model |
+
+> Placeholders throughout; APIC credentials come from the environment / a vault — nothing
+> sensitive is committed.
+
 ## What it looks like in practice
 
 Build the fabric from code, not the GUI. Tenant → application profile → EPG with `cisco.aci`,
